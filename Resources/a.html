@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Drag & Drop Cursor Test</title>
+<style>
+  body {
+    font-family: sans-serif;
+    background: #fafafa;
+    margin: 20px;
+  }
+  h1 {
+    text-align: center;
+  }
+  .draggable {
+    width: 120px;
+    height: 120px;
+    background: #2196f3;
+    color: white;
+    border-radius: 8px;
+    text-align: center;
+    line-height: 120px;
+    cursor: grab;
+    user-select: none;
+    margin: 20px auto;
+  }
+  .container {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .zone {
+    width: 200px;
+    height: 150px;
+    border: 2px dashed #999;
+    border-radius: 10px;
+    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.3s, border-color 0.3s;
+  }
+  .zone.dragover {
+    background: #e0ffe0;
+    border-color: #4caf50;
+  }
+  #rejectZone {
+    background: #ffe0e0;
+    border-color: #f44336;
+  }
+  #rejectZone.dragover {
+    background: #ffcccc;
+    border-color: #f44336;
+    cursor: not-allowed !important;
+  }
+  /* Custom cursor for drag rejection */
+  .reject-cursor {
+    cursor: not-allowed !important;
+  }
+  .reject-cursor::after {
+    content: "🚫";
+    position: absolute;
+    pointer-events: none;
+    font-size: 24px;
+    margin-left: 10px;
+    margin-top: -10px;
+  }
+  #log {
+    margin-top: 30px;
+    background: #000;
+    color: #0f0;
+    padding: 10px;
+    font-family: monospace;
+    height: 200px;
+    overflow-y: auto;
+    border-radius: 8px;
+  }
+</style>
+</head>
+<body>
+<h1>🖱️ Drag & Drop Cursor Feedback Test</h1>
+
+<div class="draggable" draggable="true" id="dragbox">Drag Me</div>
+
+<div class="container">
+  <div id="moveZone" class="zone">Move Only</div>
+  <div id="copyZone" class="zone">Copy Only</div>
+  <div id="linkZone" class="zone">Link Only</div>
+  <div id="rejectZone" class="zone">Reject</div>
+</div>
+
+<div id="log"></div>
+
+<script>
+const log = (msg) => {
+  const el = document.getElementById('log');
+  el.innerHTML += msg + "<br>";
+  el.scrollTop = el.scrollHeight;
+  console.log(msg);
+};
+
+// DRAG SOURCE
+const dragbox = document.getElementById("dragbox");
+dragbox.addEventListener("dragstart", (e) => {
+  e.dataTransfer.setData("text/plain", "Dragged data");
+  e.dataTransfer.effectAllowed = "all"; // both allowed
+  log("dragstart (effectAllowed: copyMove)");
+});
+dragbox.addEventListener("dragend", (e) => log(`dragend (dropEffect: ${e.dataTransfer.dropEffect})`));
+
+// DROP TARGETS
+const zones = document.querySelectorAll(".zone");
+zones.forEach(zone => {
+  zone.addEventListener("dragenter", (e) => {
+    e.preventDefault();
+    zone.classList.add("dragover");
+    
+    if (zone.id === "rejectZone") {
+      e.dataTransfer.dropEffect = "none";
+      zone.classList.add("reject-cursor");
+    }
+    
+    log("dragenter on " + zone.id);
+  });
+  zone.addEventListener("dragover", (e) => {
+    e.preventDefault(); // Always prevent default first
+    
+    if (zone.id === "rejectZone") {
+      // For reject zone: set dropEffect to none after preventing default
+      e.dataTransfer.dropEffect = "none";
+      zone.classList.add("reject-cursor");
+      log("dragover on rejectZone (dropEffect: none)");
+      return;
+    }
+    
+    const dt = e.dataTransfer;
+    switch (zone.id) {
+      case "moveZone":
+        dt.dropEffect = "move";
+        break;
+      case "copyZone":
+        dt.dropEffect = "copy";
+        break;
+      case "linkZone":
+        dt.dropEffect = "link";
+        break;
+    }
+    log(`dragover on ${zone.id} (dropEffect: ${dt.dropEffect})`);
+  });
+  zone.addEventListener("dragleave", (e) => {
+    zone.classList.remove("dragover");
+    zone.classList.remove("reject-cursor");
+    log("dragleave on " + zone.id);
+  });
+  zone.addEventListener("drop", (e) => {
+    if (zone.id === "rejectZone") {
+      // Don't prevent default for reject zone - this prevents the drop
+      zone.classList.remove("dragover");
+      zone.classList.remove("reject-cursor");
+      log("drop rejected on rejectZone");
+      return;
+    }
+    
+    e.preventDefault();
+    zone.classList.remove("dragover");
+    const data = e.dataTransfer.getData("text/plain");
+    log(`drop on ${zone.id} (data: "${data}", dropEffect: ${e.dataTransfer.dropEffect})`);
+  });
+});
+</script>
+</body>
+</html>
